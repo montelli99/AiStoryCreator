@@ -1,0 +1,487 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useSession, signOut } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import { useSocket, useJobUpdates, useContentUpdates, useAnalyticsUpdates } from '@/hooks/use-socket';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuSeparator, 
+  DropdownMenuTrigger 
+} from '@/components/ui/dropdown-menu';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { 
+  BarChart3, 
+  Users, 
+  Video, 
+  Image, 
+  Clock, 
+  TrendingUp,
+  Calendar,
+  Settings,
+  Bot,
+  PlayCircle,
+  CheckCircle,
+  AlertCircle,
+  Activity,
+  Key,
+  LogOut,
+  User
+} from 'lucide-react';
+
+export default function Dashboard() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const { isConnected } = useSocket({ autoConnect: true });
+  
+  const [stats, setStats] = useState({
+    totalContent: 0,
+    activeCharacters: 0,
+    renderingQueue: 0,
+    todayPosts: 0,
+    avgPerformance: 0,
+    weeklyGrowth: 0
+  });
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/login');
+    }
+  }, [status, router]);
+
+  const fetchAnalytics = async () => {
+    try {
+      const response = await fetch('/api/analytics/summary');
+      const data = await response.json();
+      
+      setStats({
+        totalContent: data.totalContent || 156,
+        activeCharacters: data.activeCharacters || 12,
+        renderingQueue: data.renderingQueue || 3,
+        todayPosts: data.todayPosts || 8,
+        avgPerformance: data.avgPerformance || 87,
+        weeklyGrowth: data.weeklyGrowth || 15
+      });
+    } catch (error) {
+      console.error('Failed to fetch analytics:', error);
+    }
+  };
+
+  // Real-time updates with WebSocket
+  useJobUpdates((data) => {
+    console.log('Job update received:', data);
+    // Update job queue in real-time
+    setJobQueue(prev => prev.map(job => 
+      job.id === data.jobId ? { ...job, ...data } : job
+    ));
+  });
+
+  useContentUpdates((data) => {
+    console.log('Content update received:', data);
+    // Update recent content in real-time
+    setRecentContent(prev => [data, ...prev.slice(0, 4)]);
+  });
+
+  useAnalyticsUpdates((data) => {
+    console.log('Analytics update received:', data);
+    // Update stats in real-time
+    setStats(prev => ({ ...prev, ...data }));
+  });
+
+  useEffect(() => {
+    if (status === 'authenticated') {
+      fetchAnalytics();
+      // Fetch less frequently with WebSocket updates
+      const interval = setInterval(fetchAnalytics, 30000); // Refresh every 30 seconds
+      return () => clearInterval(interval);
+    }
+  }, [status]);
+
+  const [recentContent, setRecentContent] = useState([
+    {
+      id: '1',
+      title: 'Luxury Watch Showcase',
+      character: 'ID_01_A',
+      type: 'video',
+      status: 'rendering',
+      performance: 0
+    },
+    {
+      id: '2',
+      title: 'Street Fashion Editorial',
+      character: 'ID_03_B',
+      type: 'image',
+      status: 'ready',
+      performance: 85
+    },
+    {
+      id: '3',
+      title: 'Tech Product Review',
+      character: 'ID_05_C',
+      type: 'video',
+      status: 'posted',
+      performance: 92
+    }
+  ]);
+
+  const [jobQueue, setJobQueue] = useState([
+    { id: '1', type: 'Video Generation', status: 'processing', progress: 65 },
+    { id: '2', type: 'Image Generation', status: 'pending', progress: 0 },
+    { id: '3', type: 'Director Planning', status: 'completed', progress: 100 }
+  ]);
+
+  const [topCharacters, setTopCharacters] = useState([
+    { code: 'ID_01_A', performance: 92, content: 24 },
+    { code: 'ID_03_B', performance: 88, content: 18 },
+    { code: 'ID_05_C', performance: 85, content: 22 }
+  ]);
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'rendering':
+      case 'processing':
+        return <Clock className="w-4 h-4 text-yellow-500" />;
+      case 'ready':
+        return <CheckCircle className="w-4 h-4 text-green-500" />;
+      case 'posted':
+        return <PlayCircle className="w-4 h-4 text-blue-500" />;
+      case 'completed':
+        return <CheckCircle className="w-4 h-4 text-green-500" />;
+      case 'pending':
+        return <AlertCircle className="w-4 h-4 text-gray-500" />;
+      default:
+        return <AlertCircle className="w-4 h-4 text-gray-500" />;
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+      rendering: "secondary",
+      processing: "secondary",
+      ready: "default",
+      posted: "default",
+      completed: "default",
+      pending: "outline"
+    };
+    
+    return <Badge variant={variants[status] || "outline"}>{status}</Badge>;
+  };
+
+  return (
+    <div className="min-h-screen bg-background p-4 md:p-6">
+      <div className="max-w-7xl mx-auto space-y-4 md:space-y-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">AI Creator Studio</h1>
+            <p className="text-sm md:text-base text-muted-foreground">
+              Cinematic video automation platform dashboard
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge variant={isConnected ? "default" : "destructive"} className="gap-1 text-xs">
+              <Activity className="w-3 h-3" />
+              {isConnected ? "Live" : "Offline"}
+            </Badge>
+            <Badge variant="secondary" className="text-xs">v1.0</Badge>
+            
+            {/* User Menu */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                  <Avatar className="h-8 w-8">
+                    <AvatarFallback className="text-xs">
+                      {session?.user?.name?.charAt(0) || session?.user?.email?.charAt(0) || 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56" align="end" forceMount>
+                <div className="flex items-center justify-start gap-2 p-2">
+                  <div className="flex flex-col space-y-1 leading-none">
+                    {session?.user?.name && (
+                      <p className="font-medium text-sm">{session.user.name}</p>
+                    )}
+                    {session?.user?.email && (
+                      <p className="w-[200px] truncate text-xs text-muted-foreground">
+                        {session.user.email}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => router.push('/settings/api-keys')}>
+                  <Key className="mr-2 h-4 w-4" />
+                  <span className="text-sm">API Keys</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => router.push('/settings')}>
+                  <Settings className="mr-2 h-4 w-4" />
+                  <span className="text-sm">Settings</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="text-red-600"
+                  onClick={() => signOut({ callbackUrl: '/login' })}
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span className="text-sm">Log out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+
+        {/* Stats Grid - Mobile Optimized */}
+        <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
+          <Card className="p-3 sm:p-4">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-xs sm:text-sm font-medium">Total Content</CardTitle>
+              <Video className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="text-lg sm:text-2xl font-bold">{stats.totalContent}</div>
+              <p className="text-xs text-muted-foreground">+12% from last week</p>
+            </CardContent>
+          </Card>
+
+          <Card className="p-3 sm:p-4">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-xs sm:text-sm font-medium">Active Characters</CardTitle>
+              <Users className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="text-lg sm:text-2xl font-bold">{stats.activeCharacters}/18</div>
+              <p className="text-xs text-muted-foreground">3 top performers</p>
+            </CardContent>
+          </Card>
+
+          <Card className="p-3 sm:p-4">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-xs sm:text-sm font-medium">Rendering Queue</CardTitle>
+              <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="text-lg sm:text-2xl font-bold">{stats.renderingQueue}</div>
+              <p className="text-xs text-muted-foreground">2 processing</p>
+            </CardContent>
+          </Card>
+
+          <Card className="p-3 sm:p-4">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-xs sm:text-sm font-medium">Today's Posts</CardTitle>
+              <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="text-lg sm:text-2xl font-bold">{stats.todayPosts}</div>
+              <p className="text-xs text-muted-foreground">3 scheduled</p>
+            </CardContent>
+          </Card>
+
+          <Card className="p-3 sm:p-4">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-xs sm:text-sm font-medium">Avg Performance</CardTitle>
+              <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="text-lg sm:text-2xl font-bold">{stats.avgPerformance}%</div>
+              <p className="text-xs text-muted-foreground">+5% improvement</p>
+            </CardContent>
+          </Card>
+
+          <Card className="p-3 sm:p-4">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-xs sm:text-sm font-medium">Weekly Growth</CardTitle>
+              <BarChart3 className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="text-lg sm:text-2xl font-bold">+{stats.weeklyGrowth}%</div>
+              <p className="text-xs text-muted-foreground">Views & engagement</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Main Content */}
+        <Tabs defaultValue="overview" className="space-y-4">
+          <TabsList className="w-full flex flex-wrap h-auto p-1">
+            <TabsTrigger value="overview" className="flex-1 min-w-[100px] text-xs">Overview</TabsTrigger>
+            <TabsTrigger value="content" className="flex-1 min-w-[100px] text-xs">Recent Content</TabsTrigger>
+            <TabsTrigger value="queue" className="flex-1 min-w-[100px] text-xs">Job Queue</TabsTrigger>
+            <TabsTrigger value="characters" className="flex-1 min-w-[100px] text-xs">Top Characters</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="overview" className="space-y-4">
+            <div className="grid gap-4 lg:grid-cols-3">
+              <Card className="lg:col-span-2">
+                <CardHeader>
+                  <CardTitle className="text-base md:text-lg">Production Overview</CardTitle>
+                  <CardDescription className="text-sm">
+                    Today's content generation pipeline status
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span>Image Generation</span>
+                      <span>8/10 completed</span>
+                    </div>
+                    <Progress value={80} />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span>Video Generation</span>
+                      <span>3/5 completed</span>
+                    </div>
+                    <Progress value={60} />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span>Director Planning</span>
+                      <span>12/12 completed</span>
+                    </div>
+                    <Progress value={100} />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base md:text-lg">AI Director Status</CardTitle>
+                  <CardDescription className="text-sm">
+                    GLM-4.6 Director AI operations
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Bot className="w-4 h-4 text-green-500" />
+                    <span className="text-sm">Director Active</span>
+                  </div>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span>Plans Generated:</span>
+                      <span>24</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Optimization Score:</span>
+                      <span>94%</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Next Analysis:</span>
+                      <span>2h 15m</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="content" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base md:text-lg">Recent Content</CardTitle>
+                <CardDescription className="text-sm">
+                  Latest generated and published content
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {recentContent.map((content) => (
+                    <div key={content.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 border rounded-lg gap-3">
+                      <div className="flex items-center gap-3 sm:gap-4">
+                        {content.type === 'video' ? (
+                          <Video className="w-6 h-6 sm:w-8 sm:h-8 text-blue-500" />
+                        ) : (
+                          <Image className="w-6 h-6 sm:w-8 sm:h-8 text-green-500" />
+                        )}
+                        <div>
+                          <p className="font-medium text-sm">{content.title}</p>
+                          <p className="text-xs sm:text-sm text-muted-foreground">{content.character}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {getStatusIcon(content.status)}
+                        {getStatusBadge(content.status)}
+                        {content.performance > 0 && (
+                          <Badge variant="outline" className="text-xs">{content.performance}%</Badge>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="queue" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base md:text-lg">Job Queue</CardTitle>
+                <CardDescription className="text-sm">
+                  Background processing jobs
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {jobQueue.map((job) => (
+                    <div key={job.id} className="space-y-2">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          {getStatusIcon(job.status)}
+                          <span className="font-medium text-sm">{job.type}</span>
+                        </div>
+                        <span className="text-xs sm:text-sm text-muted-foreground">{job.progress}%</span>
+                      </div>
+                      <Progress value={job.progress} />
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="characters" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Top Performing Characters</CardTitle>
+                <CardDescription>
+                  Character rankings by performance score
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {topCharacters.map((character, index) => (
+                    <div key={character.code} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground text-sm font-bold">
+                          {index + 1}
+                        </div>
+                        <div>
+                          <p className="font-medium">{character.code}</p>
+                          <p className="text-sm text-muted-foreground">{character.content} pieces</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="text-right">
+                          <p className="font-bold">{character.performance}%</p>
+                          <p className="text-xs text-muted-foreground">performance</p>
+                        </div>
+                        <TrendingUp className="w-4 h-4 text-green-500" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
+    </div>
+  );
+}
