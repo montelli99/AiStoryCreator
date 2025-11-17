@@ -1,63 +1,68 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent } from "@/components/ui/card";
+import { Wand2 } from "lucide-react";
 
-export function VariantSelector() {
-  const [contentId, setContentId] = useState('');
-  const [variants, setVariants] = useState([]);
+export default function VariantSelector() {
+  const [script, setScript] = useState("");
+  const [variants, setVariants] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const handleGenerate = async () => {
+  async function generate() {
+    if (!script.trim()) return;
+
     setLoading(true);
     try {
-      const res = await fetch('/api/viral/variants', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contentId })
-      });
-      const data = await res.json();
-      setVariants(data.variants || []);
-    } catch (error) {
-      console.error('Generation failed:', error);
+      const res = await fetch("/api/viral/variants", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ script }),
+      }).then((r) => r.json());
+
+      setVariants(res.data || []);
+    } catch (err) {
+      console.error("Variant generation error:", err);
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Video Variants</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div>
-          <label className="text-sm font-medium">Content ID</label>
-          <input
-            type="text"
-            value={contentId}
-            onChange={(e) => setContentId(e.target.value)}
-            placeholder="Enter content ID"
-            className="w-full p-2 border rounded mt-1"
-          />
+    <div className="space-y-4">
+      <Textarea
+        placeholder="Enter your video script..."
+        className="min-h-[100px] resize-none"
+        value={script}
+        onChange={(e) => setScript(e.target.value)}
+      />
+
+      <Button
+        onClick={generate}
+        className="w-full"
+        disabled={loading || !script.trim()}
+      >
+        <Wand2 className="w-4 h-4 mr-2" />
+        {loading ? "Generating..." : "Generate Variants"}
+      </Button>
+
+      {variants.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {variants.map((v, i) => (
+            <Card key={i} className="bg-muted/50">
+              <CardContent className="pt-4">
+                <p className="font-semibold text-sm mb-2">{v.type || `Variant ${i + 1}`}</p>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  {v.description || v.content}
+                </p>
+              </CardContent>
+            </Card>
+          ))}
         </div>
-
-        <Button onClick={handleGenerate} disabled={loading}>
-          {loading ? 'Generating...' : 'Generate Variants'}
-        </Button>
-
-        {variants.length > 0 && (
-          <div className="grid grid-cols-3 gap-2">
-            {variants.map((v: any) => (
-              <div key={v.id} className="p-2 border rounded text-center">
-                <p className="font-medium text-sm">{v.variant}</p>
-              </div>
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+      )}
+    </div>
   );
 }
 
