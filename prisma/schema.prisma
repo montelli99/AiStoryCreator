@@ -336,3 +336,16 @@ model TikTokPostLog {
   success   Boolean
   createdAt DateTime @default(now())
 }
+
+// ============================================
+// USER PREFERENCES & THEMING
+// ============================================
+
+model UserPreferences {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  viewMode  String   @default("vision") // vision | stripe | linear | tiktok
+  updatedAt DateTime @updatedAt
+
+  @@map("user_preferences")
+}

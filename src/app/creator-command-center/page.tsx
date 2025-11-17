@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTheme } from "@/lib/theme/theme-context";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,47 +9,46 @@ import { Film, Zap, Settings } from "lucide-react";
 import ProjectCreator from "@/components/video/ProjectCreator";
 import RenderQueueMonitor from "@/components/video/RenderQueueMonitor";
 import ViralScoreDisplay from "@/components/video/ViralScoreDisplay";
+import PremiumSection from "@/components/theme/PremiumSection";
+import PremiumCard from "@/components/theme/PremiumCard";
+import PremiumGrid from "@/components/theme/PremiumGrid";
+import PremiumBadge from "@/components/theme/PremiumBadge";
 
 export default function CreatorCommandCenter() {
   const [activeTab, setActiveTab] = useState("factory");
+  const { viewMode, tokens } = useTheme();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950 to-slate-950 p-6">
+    <div
+      style={{
+        minHeight: "100vh",
+        backgroundColor: tokens.colors.background,
+        padding: "24px",
+      }}
+    >
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
+        <PremiumSection title="Creator Command Center V2" subtitle="AI-powered video factory with Director AI, viral scoring, and TikTok auto-posting">
           <div className="flex items-center gap-3 mb-2">
-            <Film className="w-8 h-8 text-purple-400" />
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-              Creator Command Center V2
-            </h1>
+            <Film className="w-8 h-8" style={{ color: tokens.colors.accent }} />
           </div>
-          <p className="text-muted-foreground">
-            AI-powered video factory with Director AI, viral scoring, and TikTok auto-posting
-          </p>
-        </div>
+        </PremiumSection>
 
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <Card className="bg-gradient-to-br from-blue-900/20 to-blue-800/10 border-blue-500/30">
-            <CardContent className="pt-6">
-              <div className="text-3xl font-bold text-blue-400">∞</div>
-              <div className="text-sm text-muted-foreground">Video Variations</div>
-            </CardContent>
-          </Card>
-          <Card className="bg-gradient-to-br from-purple-900/20 to-purple-800/10 border-purple-500/30">
-            <CardContent className="pt-6">
-              <div className="text-3xl font-bold text-purple-400">AI</div>
-              <div className="text-sm text-muted-foreground">Director AI Planning</div>
-            </CardContent>
-          </Card>
-          <Card className="bg-gradient-to-br from-pink-900/20 to-pink-800/10 border-pink-500/30">
-            <CardContent className="pt-6">
-              <div className="text-3xl font-bold text-pink-400">🚀</div>
-              <div className="text-sm text-muted-foreground">Auto-Post to TikTok</div>
-            </CardContent>
-          </Card>
-        </div>
+        <PremiumGrid columns={3} gap={16} className="mb-8">
+          <PremiumCard>
+            <div className="text-3xl font-bold" style={{ color: tokens.colors.accent }}>∞</div>
+            <div style={{ color: tokens.colors.textMuted, fontSize: "14px" }}>Video Variations</div>
+          </PremiumCard>
+          <PremiumCard>
+            <div className="text-3xl font-bold" style={{ color: tokens.colors.accent }}>AI</div>
+            <div style={{ color: tokens.colors.textMuted, fontSize: "14px" }}>Director AI Planning</div>
+          </PremiumCard>
+          <PremiumCard>
+            <div className="text-3xl font-bold" style={{ color: tokens.colors.accent }}>🚀</div>
+            <div style={{ color: tokens.colors.textMuted, fontSize: "14px" }}>Auto-Post to TikTok</div>
+          </PremiumCard>
+        </PremiumGrid>
 
         {/* Main Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
